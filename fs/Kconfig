@@ -330,4 +330,8 @@ source "fs/exfat/Kconfig"
 #endif /*OPLUS_FEATURE_EXFAT_SUPPORT*/
 source "fs/unicode/Kconfig"
 
+config FS_HPB
+	bool "Support HPB on Filesystem"
+	default n
+
 endmenu
