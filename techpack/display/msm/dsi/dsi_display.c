@@ -96,6 +96,8 @@ static const struct of_device_id dsi_display_dt_match[] = {
 	{}
 };
 
+struct dsi_display *primary_display;
+
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
 			u32 mask, bool enable)
 {
@@ -8092,9 +8094,6 @@ int dsi_display_pre_commit(void *display,
 	}
 #endif
 
-	return rc;
-}
-
 int dsi_display_enable(struct dsi_display *display)
 {
 	int rc = 0;
@@ -8151,13 +8150,6 @@ int dsi_display_enable(struct dsi_display *display)
 	mutex_lock(&display->display_lock);
 
 	mode = display->panel->cur_mode;
-
-#ifdef OPLUS_BUG_STABILITY
-	if (cur_h_active != display->panel->cur_mode->timing.h_active) {
-		udelay(8000); //Add delay for resolution switch garbage issue
-		cur_h_active = display->panel->cur_mode->timing.h_active;
-	}
-#endif
 
 	if (mode->dsi_mode_flags & DSI_MODE_FLAG_DMS) {
 		rc = dsi_panel_post_switch(display->panel);
