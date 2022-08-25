@@ -66,6 +66,16 @@
 /* let's not notify more than 100 times per second */
 #define CGROUP_FILE_NOTIFY_MIN_INTV	DIV_ROUND_UP(HZ, 100)
 
+DEFINE_SPINLOCK(css_set_lock);
+DEFINE_MUTEX(cgroup_mutex);
+#ifdef CONFIG_PROVE_RCU
+EXPORT_SYMBOL_GPL(cgroup_mutex);
+EXPORT_SYMBOL_GPL(css_set_lock);
+#endif
+
+
+
+
 /*
  * cgroup_mutex is the master lock.  Any modification to cgroup or its
  * hierarchy must be performed while holding it.
@@ -76,13 +86,6 @@
  * These locks are exported if CONFIG_PROVE_RCU so that accessors in
  * cgroup.h can use them for lockdep annotations.
  */
-DEFINE_MUTEX(cgroup_mutex);
-DEFINE_SPINLOCK(css_set_lock);
-
-#ifdef CONFIG_PROVE_RCU
-EXPORT_SYMBOL_GPL(cgroup_mutex);
-EXPORT_SYMBOL_GPL(css_set_lock);
-#endif
 
 DEFINE_SPINLOCK(trace_cgroup_path_lock);
 char trace_cgroup_path[TRACE_CGROUP_PATH_LEN];
