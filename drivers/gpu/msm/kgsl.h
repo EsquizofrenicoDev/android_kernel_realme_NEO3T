@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2021, The Linux Foundation. All rights reserved.
  */
 #ifndef __KGSL_H
 #define __KGSL_H
@@ -188,8 +188,6 @@ struct kgsl_memdesc_ops {
 #define KGSL_MEMDESC_RECLAIMED BIT(12)
 /* Skip reclaim of the memdesc pages */
 #define KGSL_MEMDESC_SKIP_RECLAIM BIT(13)
-/* Use SHMEM for allocation */
-#define KGSL_MEMDESC_USE_SHMEM BIT(14)
 
 /**
  * struct kgsl_memdesc - GPU memory object descriptor
@@ -240,7 +238,6 @@ struct kgsl_memdesc {
 	 * multiple entities trying to map the same SVM region at once
 	 */
 	spinlock_t gpuaddr_lock;
-
 };
 
 /*
@@ -426,6 +423,20 @@ long kgsl_ioctl_gpu_command(struct kgsl_device_private *dev_priv,
 				unsigned int cmd, void *data);
 long kgsl_ioctl_gpuobj_set_info(struct kgsl_device_private *dev_priv,
 				unsigned int cmd, void *data);
+long kgsl_ioctl_gpu_aux_command(struct kgsl_device_private *dev_priv,
+		unsigned int cmd, void *data);
+long kgsl_ioctl_timeline_create(struct kgsl_device_private *dev_priv,
+		unsigned int cmd, void *data);
+long kgsl_ioctl_timeline_wait(struct kgsl_device_private *dev_priv,
+		unsigned int cmd, void *data);
+long kgsl_ioctl_timeline_query(struct kgsl_device_private *dev_priv,
+		unsigned int cmd, void *data);
+long kgsl_ioctl_timeline_fence_get(struct kgsl_device_private *dev_priv,
+		unsigned int cmd, void *data);
+long kgsl_ioctl_timeline_signal(struct kgsl_device_private *dev_priv,
+		unsigned int cmd, void *data);
+long kgsl_ioctl_timeline_destroy(struct kgsl_device_private *dev_priv,
+		unsigned int cmd, void *data);
 
 long kgsl_ioctl_sparse_phys_alloc(struct kgsl_device_private *dev_priv,
 					unsigned int cmd, void *data);
