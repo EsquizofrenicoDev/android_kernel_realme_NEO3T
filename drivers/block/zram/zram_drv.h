@@ -88,6 +88,7 @@ struct zram_table_entry {
 #ifdef CONFIG_ZRAM_MEMORY_TRACKING
 	ktime_t ac_time;
 #endif
+	int blk_idx;
 };
 
 struct zram_stats {
@@ -161,9 +162,6 @@ struct zram {
 	struct dentry *debugfs_dir;
 #endif
 #if (defined CONFIG_ZRAM_WRITEBACK) || (defined CONFIG_HYBRIDSWAP_CORE)
-	struct block_device *bdev;
-	unsigned int old_block_size;
-	unsigned long nr_pages;
 	unsigned long increase_nr_pages;
 #endif
 #ifdef CONFIG_HYBRIDSWAP_CORE
