@@ -170,6 +170,14 @@ extern void __kthread_init_worker(struct kthread_worker *worker,
 
 int kthread_worker_fn(void *worker_ptr);
 
+static inline bool queuing_blocked(struct kthread_worker *worker,
+                                   struct kthread_work *work)
+{
+        lockdep_assert_held(&worker->lock);
+
+        return !list_empty(&work->node) || work->canceling;
+}
+
 __printf(2, 3)
 struct kthread_worker *
 kthread_create_worker(unsigned int flags, const char namefmt[], ...);
