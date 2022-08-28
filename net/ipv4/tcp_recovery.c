@@ -117,7 +117,6 @@ void tcp_rack_mark_lost(struct sock *sk)
 	if (!tp->rack.advanced)
 		return;
 
-	/* Reset the advanced flag to avoid unnecessary queue scanning */
 	tp->rack.advanced = 0;
 	tcp_rack_detect_loss(sk, &timeout);
 	if (timeout) {

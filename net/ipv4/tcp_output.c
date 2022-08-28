@@ -45,7 +45,7 @@
 #include <net/oplus/oplus_kernel2user.h>
 //#endif /* OPLUS_FEATURE_DATA_EVAL */
 #include <linux/static_key.h>
-
+#include <net/oplus_nwpower.h>
 #include <trace/events/tcp.h>
 
 /* Refresh clocks of a TCP socket,
