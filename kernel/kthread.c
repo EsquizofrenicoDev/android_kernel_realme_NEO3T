@@ -778,14 +778,14 @@ EXPORT_SYMBOL(kthread_create_worker_on_cpu);
  * It happens when it is already pending in a worker list
  * or when it is being cancelled.
  */
-static inline bool queuing_blocked(struct kthread_worker *worker,
+/*static inline bool queuing_blocked(struct kthread_worker *worker,
 				   struct kthread_work *work)
 {
 	lockdep_assert_held(&worker->lock);
 
 	return !list_empty(&work->node) || work->canceling;
 }
-
+*/
 static void kthread_insert_work_sanity_check(struct kthread_worker *worker,
 					     struct kthread_work *work)
 {
