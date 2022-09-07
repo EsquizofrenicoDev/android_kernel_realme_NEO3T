@@ -3,7 +3,6 @@
  * QTI Secure Execution Environment Communicator (QSEECOM) driver
  *
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #define pr_fmt(fmt) "QSEECOM: %s: " fmt, __func__
@@ -1934,7 +1933,7 @@ static int qseecom_scale_bus_bandwidth(struct qseecom_dev_handle *data,
 		pr_err("copy_from_user failed\n");
 		return ret;
 	}
-	if (req_mode > HIGH || req_mode < QSEECOM_STATE_NOT_READY) {
+	if (req_mode > HIGH) {
 		pr_err("Invalid bandwidth mode (%d)\n", req_mode);
 		return -EINVAL;
 	}
@@ -2624,6 +2623,12 @@ err_resp:
 		case QSEOS_RESULT_CBACK_REQUEST:
 			pr_warn("get cback req app_id = %d, resp->data = %d\n",
 				data->client.app_id, resp->data);
+			resp->resp_type = SMCINVOKE_RESULT_INBOUND_REQ_NEEDED;
+			/* We are here because scm call sent to TZ has requested
+			 * for another callback request. This call has been a
+			 * success and hence setting result = 0
+			 */
+			resp->result = 0;
 			break;
 		default:
 			pr_err("fail:resp res= %d,app_id = %d,lstr = %d\n",
@@ -5367,8 +5372,8 @@ int qseecom_process_listener_from_smcinvoke(struct scm_desc *desc)
 		pr_err("Failed on cmd %d for lsnr %d session %d, ret = %d\n",
 			(int)desc->ret[0], (int)desc->ret[2],
 			(int)desc->ret[1], ret);
-	desc->ret[0] = resp.result;
-	desc->ret[1] = resp.resp_type;
+	desc->ret[0] = resp.resp_type;
+	desc->ret[1] = resp.result;
 	desc->ret[2] = resp.data;
 	return ret;
 }

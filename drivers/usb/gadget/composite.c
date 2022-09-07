@@ -20,6 +20,12 @@
 
 #include "u_os_desc.h"
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+static bool enable_l1_for_hs;
+module_param(enable_l1_for_hs, bool, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(enable_l1_for_hs, "Enable support for L1 LPM for HS devices");
+#endif
+
 /**
  * struct usb_os_string - represents OS String to be reported by a gadget
  * @bLength: total length of the entire descritor, always 0x12
@@ -1750,14 +1756,14 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	u8				endp;
 
 	if (w_length > USB_COMP_EP0_BUFSIZ) {
-		if (ctrl->bRequestType & USB_DIR_IN) {
+		if (ctrl->bRequestType == USB_DIR_OUT) {
+			goto done;
+		} else {
 			/* Cast away the const, we are going to overwrite on purpose. */
 			__le16 *temp = (__le16 *)&ctrl->wLength;
 
 			*temp = cpu_to_le16(USB_COMP_EP0_BUFSIZ);
 			w_length = USB_COMP_EP0_BUFSIZ;
-		} else {
-			goto done;
 		}
 	}
 
@@ -1792,12 +1798,23 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			cdev->desc.bMaxPacketSize0 =
 				cdev->gadget->ep0->maxpacket;
 			if (gadget_is_superspeed(gadget)) {
+#ifdef OPLUS_FEATURE_CHG_BASIC
+				if (gadget->speed >= USB_SPEED_SUPER) {
+					cdev->desc.bcdUSB = cpu_to_le16(0x0320);
+				cdev->desc.bMaxPacketSize0 = 9;
+				} else if (gadget->lpm_capable || enable_l1_for_hs)  {
+					cdev->desc.bcdUSB = cpu_to_le16(0x0210);
+				} else {
+					cdev->desc.bcdUSB = cpu_to_le16(0x0200);
+				}
+#else
 				if (gadget->speed >= USB_SPEED_SUPER) {
 					cdev->desc.bcdUSB = cpu_to_le16(0x0320);
 					cdev->desc.bMaxPacketSize0 = 9;
 				} else {
 					cdev->desc.bcdUSB = cpu_to_le16(0x0210);
 				}
+#endif
 			} else {
 				if (gadget->lpm_capable)
 					cdev->desc.bcdUSB = cpu_to_le16(0x0201);
@@ -1835,7 +1852,11 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 				value = min(w_length, (u16) value);
 			break;
 		case USB_DT_BOS:
+#ifdef OPLUS_FEATURE_CHG_BASIC
+			if ((gadget_is_superspeed(gadget) && (gadget->speed >= USB_SPEED_SUPER)) ||
+#else
 			if (gadget_is_superspeed(gadget) ||
+#endif
 			    gadget->lpm_capable) {
 				value = bos_desc(cdev);
 				value = min(w_length, (u16) value);
@@ -2303,7 +2324,8 @@ int composite_dev_prepare(struct usb_composite_driver *composite,
 	if (!cdev->req)
 		return -ENOMEM;
 
-	cdev->req->buf = kzalloc(USB_COMP_EP0_BUFSIZ, GFP_KERNEL);
+	cdev->req->buf = kmalloc(USB_COMP_EP0_BUFSIZ +
+				(gadget->extra_buf_alloc), GFP_KERNEL);
 	if (!cdev->req->buf)
 		goto fail;
 
@@ -2330,11 +2352,6 @@ int composite_dev_prepare(struct usb_composite_driver *composite,
 	 * drivers will zero ep->driver_data.
 	 */
 	usb_ep_autoconfig_reset(gadget);
-	/*
-	 * Reset deactivations as it is not possible to synchronize
-	 * between bind/unbind and open/close by user space application.
-	 */
-	cdev->deactivations = 0;
 	return 0;
 fail_dev:
 	kfree(cdev->req->buf);

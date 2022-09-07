@@ -1,0 +1,1 @@
+/home/moises/kernels/realme_Q5pro-AndroidS-vendor-source-master/vendor/oplus/kernel/misc/sim_detect.c
