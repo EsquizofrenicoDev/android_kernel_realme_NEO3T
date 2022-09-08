@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -18,7 +18,7 @@
 #include "iris/dsi_iris5_gpio.h"
 #endif
 #ifdef OPLUS_BUG_STABILITY
-#include <soc/oplus/system/boot_mode.h>
+#include <soc/oppo/boot_mode.h>
 #include "oplus_display_private_api.h"
 #include "oplus_dc_diming.h"
 #include "oplus_onscreenfingerprint.h"
@@ -822,6 +822,8 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	if (!panel || !panel->cur_mode)
 		return -EINVAL;
 
+	mutex_lock(&panel->panel_tx_lock);
+
 	mode = panel->cur_mode;
 
 	cmds = mode->priv_info->cmd_sets[type].cmds;
@@ -862,6 +864,7 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 		rc = iris_pt_send_panel_cmd(panel, &(mode->priv_info->cmd_sets[type]));
 		if (rc)
 			DSI_ERR("iris_pt_send_panel_cmd failed\n");
+			mutex_unlock(&panel->panel_tx_lock);
 		return rc;
     }
 #endif
@@ -892,6 +895,7 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 		cmds++;
 	}
 error:
+	mutex_unlock(&panel->panel_tx_lock);
 	return rc;
 }
 
@@ -970,12 +974,26 @@ int dsi_panel_backlight_get(void)
 #ifdef OPLUS_BUG_STABILITY
 int enable_global_hbm_flags = 0;
 #endif
+static int dsi_panel_dcs_set_display_brightness_c2(struct mipi_dsi_device *dsi,
+			u32 bl_lvl)
+{
+	u16 brightness = (u16)bl_lvl;
+	u8 first_byte = brightness & 0xff;
+	u8 second_byte = brightness >> 8;
+	u8 payload[8] = {second_byte, first_byte,
+		second_byte, first_byte,
+		second_byte, first_byte,
+		second_byte, first_byte};
+
+	return mipi_dsi_dcs_write(dsi, 0xC2, payload, sizeof(payload));
+}
 
 static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	u32 bl_lvl)
 {
 	int rc = 0;
 	struct mipi_dsi_device *dsi;
+	struct dsi_backlight_config *bl;
 
 	if (!panel || (bl_lvl > 0xffff)) {
 		DSI_ERR("invalid params\n");
@@ -986,6 +1004,7 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 #ifdef CONFIG_OPLUS_FEATURE_MISC
 	saved_backlight = bl_lvl;
 #endif
+	bl = &panel->bl_config;
 
 	if (panel->bl_config.bl_inverted_dbv)
 		bl_lvl = (((bl_lvl & 0xff) << 8) | (bl_lvl >> 8));
@@ -1070,7 +1089,7 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 				if (bl_lvl > panel->bl_config.bl_normal_max_level)
 					bl_lvl = backlight_500_600nit_buf[bl_lvl - PANEL_MAX_NOMAL_BRIGHTNESS];
 			} else {
-				if (bl_lvl >= HBM_BASE_600NIT) {
+				if (bl_lvl > HBM_BASE_600NIT) {
 					if((bl_lvl - HBM_BASE_600NIT > 5) && (enable_global_hbm_flags == 0))
 						mipi_dsi_dcs_set_display_brightness(dsi, 3538);
 					rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_HBM_ENTER_SWITCH);
@@ -1078,6 +1097,9 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 					enable_global_hbm_flags = 1;
 				} else {
 					if(enable_global_hbm_flags == 1) {
+						if(bl_lvl < HBM_BASE_600NIT) {
+							mipi_dsi_dcs_set_display_brightness(dsi, 2047);
+						}
 						payload[1] = 0x20;
 						memset(&msg, 0, sizeof(msg));
 						msg.channel = dsi->channel;
@@ -1086,7 +1108,6 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 						msg.type = MIPI_DSI_DCS_SHORT_WRITE_PARAM;
 						rc = ops->transfer(dsi->host, &msg);
 						enable_global_hbm_flags = 0;
-						mipi_dsi_dcs_set_display_brightness(dsi, 2047);
 					}
 					if (bl_lvl > PANEL_MAX_NOMAL_BRIGHTNESS) {
 						bl_lvl = backlight_500_600nit_buf[bl_lvl - PANEL_MAX_NOMAL_BRIGHTNESS];
@@ -1172,6 +1193,11 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 #else
 	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 #endif
+	if (panel->bl_config.bl_dcs_subtype == 0xc2)
+		rc = dsi_panel_dcs_set_display_brightness_c2(dsi, bl_lvl);
+	else
+		rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
+
 	if (rc < 0)
 		DSI_ERR("failed to update dcs backlight:%d\n", bl_lvl);
 
@@ -2624,7 +2650,7 @@ static int dsi_panel_create_cmd_packets(const char *data,
 		cmd[i].msg.type = data[0];
 		cmd[i].last_command = (data[1] == 1);
 		cmd[i].msg.channel = data[2];
-		cmd[i].msg.flags |= (data[3] == 1 ? MIPI_DSI_MSG_REQ_ACK : 0);
+		cmd[i].msg.flags |= data[3];
 		cmd[i].msg.ctrl = 0;
 		cmd[i].post_wait_ms = cmd[i].msg.wait_ms = data[4];
 		cmd[i].msg.tx_len = ((data[5] << 8) | (data[6]));
@@ -3192,6 +3218,16 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 		panel->bl_config.brightness_max_level = 255;
 	} else {
 		panel->bl_config.brightness_max_level = val;
+	}
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-bl-ctrl-dcs-subtype",
+		&val);
+	if (rc) {
+		DSI_DEBUG("[%s] bl-ctrl-dcs-subtype, defautling to zero\n",
+			panel->name);
+		panel->bl_config.bl_dcs_subtype = 0;
+	} else {
+		panel->bl_config.bl_dcs_subtype = val;
 	}
 
 	panel->bl_config.bl_inverted_dbv = utils->read_bool(utils->data,
@@ -4341,6 +4377,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		goto error;
 
 	mutex_init(&panel->panel_lock);
+	mutex_init(&panel->panel_tx_lock);
 
 	return panel;
 error:
@@ -4848,8 +4885,6 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 			dsi_panel_parse_adfr(mode, utils);
 		}
 #endif
-		mode->splash_dms = of_property_read_bool(child_np,
-				"qcom,mdss-dsi-splash-dms-switch-to-this-timing");
 	}
 	goto done;
 
