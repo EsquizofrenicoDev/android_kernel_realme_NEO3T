@@ -2342,10 +2342,6 @@ static __latent_entropy struct task_struct *copy_process(
 #endif
 	}
 
-#ifdef CONFIG_OPLUS_FEATURE_UID_PERF
-	if (!IS_ERR(p))
-		uid_perf_work_add(p, false);
-#endif
 	return p;
 
 bad_fork_cancel_cgroup:

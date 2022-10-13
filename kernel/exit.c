@@ -883,9 +883,6 @@ void __noreturn do_exit(long code)
 	raw_spin_lock_irq(&tsk->pi_lock);
 	raw_spin_unlock_irq(&tsk->pi_lock);
 
-#ifdef CONFIG_OPLUS_FEATURE_UID_PERF
-	uid_check_out_pevent(tsk);
-#endif
 
 	/* sync mm's RSS info before statistics gathering */
 	if (tsk->mm)
