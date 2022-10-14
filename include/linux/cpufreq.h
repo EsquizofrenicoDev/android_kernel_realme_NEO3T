@@ -160,6 +160,11 @@ struct cpufreq_policy {
 #endif /* OPLUS_FEATURE_HEALTHINFO */
 };
 
+#define CPUFREQ_ADJUST			(0)
+#define CPUFREQ_NOTIFY			(1)
+#define CPUFREQ_THERMAL                 (2)
+
+
 /* Only for ACPI */
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
 #define CPUFREQ_SHARED_TYPE_HW	 (1) /* HW does needed coordination */

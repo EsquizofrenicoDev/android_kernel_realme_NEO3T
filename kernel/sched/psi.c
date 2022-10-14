@@ -214,8 +214,8 @@ void __init psi_init(void)
 		return;
 	}
 
-	if (!cgroup_psi_enabled())
-		static_branch_disable(&psi_cgroups_enabled);
+	/*if (!cgroup_psi_enabled())
+		static_branch_disable(&psi_cgroups_enabled);*/
 
 	psi_period = jiffies_to_nsecs(PSI_FREQ);
 	group_init(&psi_system);
