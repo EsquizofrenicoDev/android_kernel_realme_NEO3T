@@ -7,8 +7,6 @@
 #
 
 KERNEL_ROOT_DIR=$(pwd)
-export OPLUS_FEATURE_UFSPLUS=yes
-export OPLUS_BUG_STABILITY=y
 TARGET_ARCH="arm64"
 [[ -f "$KERNEL_ROOT_DIR/arch/$TARGET_ARCH/configs/vendor/sm8250_defconfig" ]] && \
 KERNEL_CONFIG="vendor/rxx_defconfig" \
