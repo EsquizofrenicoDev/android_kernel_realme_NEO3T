@@ -169,7 +169,6 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #endif
 #endif /* OPLUS_FEATURE_HEALTHINFO */
 #ifdef OPLUS_FEATURE_HEALTHINFO
-	show_val_kb(m, "GPUTotalUsed:   ", gpu_total() >> PAGE_SHIFT);
 #endif /* OPLUS_FEATURE_HEALTHINFO */
 	hugetlb_report_meminfo(m);
 
