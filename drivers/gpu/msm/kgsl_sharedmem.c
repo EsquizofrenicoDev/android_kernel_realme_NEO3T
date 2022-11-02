@@ -240,13 +240,6 @@ mem_entry_max_show(struct kgsl_process_private *priv, int type, char *buf)
 	return scnprintf(buf, PAGE_SIZE, "%llu\n", priv->stats[type].max);
 }
 
-#ifdef OPLUS_FEATURE_HEALTHINFO
-unsigned long gpu_total(void)
-{
-        return (unsigned long)atomic_long_read(&kgsl_driver.stats.page_alloc);
-}
-#endif /* OPLUS_FEATURE_HEALTHINFO */
-
 static ssize_t process_sysfs_show(struct kobject *kobj,
 	struct attribute *attr, char *buf)
 {
